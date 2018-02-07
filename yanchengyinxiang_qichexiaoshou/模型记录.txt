@@ -1,0 +1,987 @@
+（1）堆特征的方法：一个月的统计（最大值，最小值，中位数，均值，方差），一个月的和销量的加权统计，历史所有的统计，历史所有的和销量的加权统计，历史所有的时延统计，历史所有的和的加权时延统计；离散化（因为很多指标例如车距，车长等只是给买方以直观感受，买方并不会对这些指标要求太精确）；离散特征和销量交叉
+（2）特征过滤
+（3）特征深挖
+（4）结合业务
+（5）bad case
+baseline：
+    两种特征，均值和计数特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000}
+    验证集：用最后一个月的销售记录
+    验证集准确率：239.912
+    线上：261.69
+
+
+1. 在baseline基础上增加各基础特征和label的加权平均特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000}
+    验证集：用最后一个月的销售记录
+    验证集准确率：200.094
+    特征名称compartment_mean,displacement_mean,avg_price_mean,power_mean,cylinder_number_mean,engine_torque_mean,car_length_mean,car_width_mean,car_height_mean,total_quality_mean,equipment_quality_mean,rated_passenger_mean,wheelbase_mean,front_track_mean,rear_track_mean,max_price_mean,min_price_mean,compartment_count,type_id_count,level_id_count,department_id_count,TR_count,gearbox_type_count,displacement_count,if_charging_count,driven_type_id_count,fuel_type_id_count,newenergy_type_id_count,emission_standards_id_count,if_MPV_id_count,if_luxurious_id_count,rated_passenger_count,max_price_count,min_price_count,avg_price_count,power_label_mean,cylinder_number_label_mean,engine_torque_label_mean,car_length_label_mean,car_width_label_mean,car_height_label_mean,total_quality_label_mean,equipment_quality_label_mean,rated_passenger_label_mean,wheelbase_label_mean,front_track_label_mean,rear_track_label_mean,max_price_label_mean,min_price_label_mean,avg_price_label_mean,sale_date,class_id,label
+    结果：./baseline/baseline_result2.csv
+    线上：263.91
+
+2. 在1的基础上增加两个特征：compartment_label_mean, displacement_label_mean
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000}
+    验证集：用最后一个月的销售记录
+    验证集准确率：203.015
+    结果：./baseline/baseline_result3.csv
+    
+TODO: 用这个结果测试验证集；若测试结果理想，找到了合理的验证集，可以尝试观察这两个特征在训练集和验证集的分布差异；测试不理想说明2的结果在线上有提升，就加上2的特征。
+
+20180115
+第一天测评出现了7个第二名的情况，如果不是他们是一个队伍的，那么最优可能的是他们用规则提交的结果：用上一个月的预测结果预测当前月份
+
+1. baseline：用201710的销售记录直接移植到201711月
+    结果：./baseline/baseling.csv
+    线上：155.22
+
+2. 将前一个月的销售记录作为一维特征，其余特征包括均值特征和计数特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000}
+    验证集：用最后一个月的销售记录
+    验证集准确率：160.696
+    特征名称[u'sale_quantity', u'compartment_mean', u'displacement_mean',
+       u'avg_price_mean', u'power_mean', u'cylinder_number_mean',
+       u'engine_torque_mean', u'car_length_mean', u'car_width_mean',
+       u'car_height_mean', u'total_quality_mean', u'equipment_quality_mean',
+       u'rated_passenger_mean', u'wheelbase_mean', u'front_track_mean',
+       u'rear_track_mean', u'max_price_mean', u'min_price_mean',
+       u'compartment_count', u'type_id_count', u'level_id_count', u'TR_count',
+       u'gearbox_type_count', u'displacement_count', u'if_charging_count',
+       u'driven_type_id_count', u'fuel_type_id_count',
+       u'newenergy_type_id_count', u'emission_standards_id_count',
+       u'if_MPV_id_count', u'if_luxurious_id_count', u'rated_passenger_count',
+       u'max_price_count', u'min_price_count', u'avg_price_count', u'sales',
+       u'sale_date', u'class_id', u'label']
+     结果：./baseline/baseline_result4.csv
+     线上：160.91
+
+3. 将前一个月的销售记录作为一维特征，其余特征包括均值特征，计数特征，加权均值特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000}
+    验证集：用最后一个月的销售记录
+    验证集准确率：164.119
+    特征名称：
+    结果：./baseline/baseline_result5.csv
+    线上：165.49
+
+总结：验证集在今天的实验中有效
+
+20180116
+特征里除了销量以外都不是直接使用原始信息，所以对特征进行筛选，同时继续测试验证集
+
+当前特征集合：
+sales,car_length_label_mean,if_charging_count,rated_passenger_mean,cylinder_number_mean,TR_count,min_price_mean,fuel_type_id_count,driven_type_id_count,gearbox_type_count,newenergy_type_id_count,min_price_label_mean,car_height_mean,engine_torque_mean,rated_passenger_label_mean,displacement_count,displacement_mean,max_price_count,car_length_mean,rated_passenger_count,max_price_label_mean,avg_price_label_mean,emission_standards_id_count,compartment_mean,cylinder_number_label_mean,wheelbase_mean,compartment_count,wheelbase_label_mean,front_track_label_mean,total_quality_mean,avg_price_mean,front_track_mean,rear_track_label_mean,car_width_label_mean,rear_track_mean,engine_torque_label_mean,car_height_label_mean,total_quality_label_mean,power_mean,max_price_mean,power_label_mean,equipment_quality_mean,equipment_quality_label_mean,compartment_label_mean,car_width_mean,displacement_label_mean
+
+xgboost筛选特征，用逐步递增的方式选择最优的特征组合
+{'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+
+1. 特征筛选结果1
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：291.997
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：148.436
+    特征：
+    "sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+    "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count"
+    答案：./20180116/result1.csv
+    线上：168.57
+      
+2. 特征筛选结果2
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：237.843
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：136.938
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+    "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+    "newenergy_type_id_count", "min_price_label_mean", "car_height_mean"]
+    答案：./20180116/result2.csv
+    线上：160.28
+    
+
+3. 特征筛选结果3
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：189.27
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：141.833
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count"]
+    答案：./20180116/result3.csv
+    线上：142.00
+
+   
+结论：在最好的特征集合基础上增加特征；验证集无效，重新构造验证集；
+   
+20180117
+增加了两类特征：bool型特征和离散特征。使用到的特征包括（type_id, 车型类别ID）；（level_id, 车型级别ID）；（if_MPV_id, 是否微客MPV）；（if_luxurious_id, 是否豪华ID）四个特征。从观察的结果发现，这在class_id和sale_date相同时，这四个特征都是不变的，所以前两个特征直接做one-hot，后两个特征直接加上
+更换验证集，20170116最优特征在该验证集上的结果是170.289
+
+1. 在20180116最优特征基础上，增加bool特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：199.42
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：145.567
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "if_MPV_id", "if_luxurious_id"]
+    答案：./20180117/result1.csv
+    线上：145.0049
+    
+
+2. 在20180116最优特征基础上，增加type_id的one-hot特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：204.446
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：139.598
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "type_id_1", "type_id_2", "type_id_3", "type_id_4"]
+    答案：./20180117/result2.csv
+    线上：146.27
+
+3. 在20180116最优特征基础上，增加level_id的one-hot特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 3000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：198.525
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：145.861
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "level_id_0", "level_id_1", "level_id_2", "level_id_3",
+               "level_id_4", "level_id_5"]
+    答案：./20180117/result3.csv
+    线上：145.48
+
+结论：增加一个验证集，用2016年10月销售记录预测2017年11月的销量，该验证集可信度较“2017年9约预测2017年10月销量”高，所以可以同时参考两个验证集结果
+
+20180118
+更新验证集后，对所有特征再进行特征筛选，用于检验验证集是否有效，注意：由于随机种子不同，在不同机器上的预测准确率会有差异，所以以后最好确定随机种子
+
+完整特征集合
+[u'sale_quantity', u'compartment_mean', u'displacement_mean',
+       u'avg_price_mean', u'power_mean', u'cylinder_number_mean',
+       u'engine_torque_mean', u'car_length_mean', u'car_width_mean',
+       u'car_height_mean', u'total_quality_mean', u'equipment_quality_mean',
+       u'rated_passenger_mean', u'wheelbase_mean', u'front_track_mean',
+       u'rear_track_mean', u'max_price_mean', u'min_price_mean',
+       u'type_id_mean', u'level_id_mean', u'compartment_count', u'TR_count',
+       u'gearbox_type_count', u'displacement_count', u'if_charging_count',
+       u'driven_type_id_count', u'fuel_type_id_count',
+       u'newenergy_type_id_count', u'emission_standards_id_count',
+       u'rated_passenger_count', u'max_price_count', u'compartment_label_mean',
+       u'displacement_label_mean', u'power_label_mean',
+       u'cylinder_number_label_mean', u'engine_torque_label_mean',
+       u'car_length_label_mean', u'car_width_label_mean',
+       u'car_height_label_mean', u'total_quality_label_mean',
+       u'equipment_quality_label_mean', u'rated_passenger_label_mean',
+       u'wheelbase_label_mean', u'front_track_label_mean',
+       u'rear_track_label_mean', u'max_price_label_mean',
+       u'min_price_label_mean', u'avg_price_label_mean', u'if_MPV_id',
+       u'if_luxurious_id', u'type_id_1', u'type_id_2', u'type_id_3',
+       u'type_id_4', u'level_id_0', u'level_id_1', u'level_id_2',
+       u'level_id_3', u'level_id_4', u'level_id_5', u'department_id_1',
+       u'department_id_2', u'department_id_3', u'department_id_4',
+       u'department_id_5', u'department_id_6', u'department_id_7', u'sales',
+       u'sale_date', u'class_id', u'label']
+
+1. 特征筛选结果1(模型参数做了调整)
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 1, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：174.817
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：163.024
+    特征：
+    ["sales", "wheelbase_mean", "displacement_mean" , "department_id_7", "car_height_label_mean",
+                "engine_torque_mean", "car_height_mean", "cylinder_number_label_mean", "fuel_type_id_count",
+                "front_track_mean", "level_id_1", "car_width_label_mean", "avg_price_label_mean", "level_id_mean",
+                "car_length_label_mean", "equipment_quality_mean", "car_length_mean", "avg_price_mean",
+                "equipment_quality_label_mean", "total_quality_mean", "department_id_3", "rated_passenger_label_mean",
+                "car_width_mean", "displacement_count", "total_quality_label_mean", "driven_type_id_count",
+                "level_id_3", "rear_track_label_mean", "max_price_count", "rated_passenger_count",
+                "compartment_label_mean", "department_id_2"]
+    答案：./20180118/result1.csv
+    线上：142.1406
+    
+2. 特征筛选结果2(模型参数做了调整)
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：176.856
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：168.876
+    特征：
+    ["sales", "wheelbase_mean", "engine_torque_mean", "car_height_label_mean", "equipment_quality_mean",
+                "displacement_mean", "level_id_mean", "department_id_3", "car_height_mean", "total_quality_mean",
+                "fuel_type_id_count", "department_id_7", "max_price_count", "equipment_quality_label_mean",
+                "front_track_mean", "department_id_2", "car_width_label_mean", "compartment_label_mean",
+                "level_id_2", "front_track_label_mean", "rated_passenger_label_mean", "max_price_label_mean",
+                "level_id_1", "newenergy_type_id_count", "car_width_mean", "car_length_mean", "avg_price_mean",
+                "car_length_label_mean", "displacement_count"]
+    答案：./20180118/result1.csv
+    线上：148.2998
+
+3. 特征筛选结果3(模型参数做了调整)
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：177.048
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：167.369
+    特征：
+    ["sales", "wheelbase_mean", "engine_torque_mean", "car_height_label_mean", "equipment_quality_mean",
+                "displacement_mean", "level_id_mean", "department_id_3", "car_height_mean", "total_quality_mean",
+                "fuel_type_id_count", "department_id_7", "max_price_count", "equipment_quality_label_mean",
+                "front_track_mean", "department_id_2", "car_width_label_mean", "compartment_label_mean",
+                "level_id_2", "front_track_label_mean", "rated_passenger_label_mean", "max_price_label_mean",
+                "level_id_1", "newenergy_type_id_count", "car_width_mean", "car_length_mean", "avg_price_mean",
+                "car_length_label_mean", "displacement_count", "rated_passenger_mean", "compartment_mean",
+                "engine_torque_label_mean", "type_id_mean"]
+    答案：./20180118/result3.csv
+    线上：161.4087
+
+结论：该验证集有待检验，根据第一个实验的线上和线下比较，发现一个验证集提高15，另一个验证集下降21，但线上基本持平，所以可能并不是两个同时提升才是提升，可能两者差距不大的时候就能提升
+    
+20170120
+从数据和特征上作尝试，从数据，历史特征筛选，新特征三个方面出三个结果
+
+1. 数据筛选
+    在训练集基础上，将class_id内销量在均值的二倍标准差范围外的样本剔除
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：189.104
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：148.716
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count"]
+    答案：/20180121/result1.csv
+    线上：731.9322
+
+2. 特征筛选
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：174.978766
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：151.3
+    特征：
+    ["sales", "wheelbase_mean", "engine_torque_mean", "car_height_label_mean", "equipment_quality_mean",
+               "displacement_mean", "level_id_mean", "department_id_3", "car_height_mean", "total_quality_mean",
+               "fuel_type_id_count", "department_id_7", "max_price_count", "equipment_quality_label_mean",
+               "front_track_mean", "department_id_2", "car_width_label_mean", "compartment_label_mean", "level_id_2",
+               "front_track_label_mean", "rated_passenger_label_mean", "max_price_label_mean", "level_id_1",
+               "newenergy_type_id_count", "car_width_mean"]
+    答案：./20180121/result2.csv
+    线上：159.6680
+
+3. 尝试新特征
+    增加total_quality的聚合中位数特征
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    验证集1：2016年10月销售记录（label是2016年11月的销量）
+    验证集1准确率：187.665
+    验证集2：2017年9月的销售记录（label是2017年10月的销量）
+    验证集2准确率：148.362
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "total_quality_median"]
+    答案：./20180121/result3.csv
+    线上：143.6248
+    
+20180122
+
+1. 用201710和201709的销量做均值
+    线上：151.5027
+
+2. 新特征1
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median"]
+    验证集1：2017年9月的销售记录（label是2017年10月的销量）
+    验证集1准确率：149.77149195220753
+    验证集2：2016年10月销售记录（label是2016年11月的销量）
+    验证集2准确率：195.56755925207636
+    在对上面的验证集进行修改，训练集中统一去除掉“2016年10月销售记录”和“2017年9月的销售记录”
+    验证集1，验证集2的结果：
+    [144.54300613501781, 197.7639701452203]
+    对比20180116的模型3
+    [146.86719761095262, 191.50759436193363]
+    线上：137.4510
+
+3. 新特征2
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "car_length_median", "car_width_median", "car_height_median"]
+    验证集1：2017年9月的销售记录（label是2017年10月的销量）
+    验证集1准确率：149.87869895609518
+    验证集2：2016年10月销售记录（label是2016年11月的销量）
+    验证集2准确率：198.31593467569266
+    在对上面的验证集进行修改，训练集中统一去除掉“2016年10月销售记录”和“2017年9月的销售记录”
+    验证集1，验证集2结果：
+    [147.092949531062, 200.20462245930599]
+    对比20180116的模型3
+    [146.86719761095262, 191.50759436193363]
+    线上：140.0085
+
+结论：增加了三个有效特征，但是很奇怪该特征在模型中的信息增益和分裂次数均为0，不知道为什么有提高
+
+20180123
+在20180122的最好结果基础上增加三组特征
+
+1. 增加特征"car_length_median", "car_width_median", "car_height_median"
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "car_length_median", "car_width_median", "car_height_median"]
+    验证集1：2017年9月的销售记录（label是2017年10月的销量）
+    验证集1准确率：149.23219269702167
+    验证集2：2016年10月销售记录（label是2016年11月的销量）
+    验证集2准确率：190.63280808650094
+    在对上面的验证集进行修改，训练集中统一去除掉“2016年10月销售记录”和“2017年9月的销售记录”
+    验证集1，验证集2结果：
+    [147.73418488792171, 195.64773020249305]
+    对比20180116的模型3
+    [146.86719761095262, 191.50759436193363]
+    对比20180122的模型2
+    [144.54300613501781, 197.7639701452203]
+    线上：137.90
+
+2. 增加“sales_is_increase”
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase"]
+    验证集1：2017年9月的销售记录（label是2017年10月的销量）
+    验证集1准确率：147.47938646491573
+    验证集2：2016年10月销售记录（label是2016年11月的销量）
+    验证集2准确率：168.01234492495445
+    在对上面的验证集进行修改，训练集中统一去除掉“2016年10月销售记录”和“2017年9月的销售记录”
+    验证集1，验证集2结果：
+    [142.71985150572644, 163.47006723327743]
+    对比20180116的模型3
+    [146.86719761095262, 191.50759436193363]
+    对比20180122的模型2
+    [144.54300613501781, 197.7639701452203]
+    线上：134.58          
+
+3. 增加"is_price_larger_max_price", "is_price_smaller_min_price", "is_price_in_price_level"
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "is_price_larger_max_price", "is_price_smaller_min_price", "is_price_in_price_level"]
+    验证集1：2017年9月的销售记录（label是2017年10月的销量）
+    验证集1准确率：144.509447913792
+    验证集2：2016年10月销售记录（label是2016年11月的销量）
+    验证集2准确率：189.33383042589492
+    在对上面的验证集进行修改，训练集中统一去除掉“2016年10月销售记录”和“2017年9月的销售记录”
+    验证集1，验证集2结果：
+    [143.68953327123077, 190.12763208659834]
+    对比20180116的模型3
+    [146.86719761095262, 191.50759436193363]
+    对比20180122的模型2
+    [144.54300613501781, 197.7639701452203]
+    线上：137.53
+    
+20180124
+在20180123最优特征的基础上，增加3组特征
+
+1. 增加"is_price_smaller_min_price", "is_price_in_price_level"
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level"]
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [144.28455191350545, 170.74898655051413, 139.14197490562415, 162.92550749068556]
+    线上：124.57
+    
+2. 增加"sales_increase", "price_increase", "price_is_increase"
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "sales_increase", "price_increase", "price_is_increase"]
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [138.78624316417981, 163.42404198715727, 138.05311900529452, 166.25829964720563]
+    线上：138.7959
+
+3. 增加"fuel_type_id_2_label_sum", "fuel_type_id_3_label_sum"
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "fuel_type_id_2_label_sum", "fuel_type_id_3_label_sum"]
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [144.30175487842826, 163.53235059651561, 142.85921160114913, 161.92843367908543]
+    线上：129.15
+
+
+20180125
+在20180124最好特征的基础上，增加三组特征
+
+1. 增加特征"fuel_type_id_2_label_sum", "fuel_type_id_3_label_sum"
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               "fuel_type_id_2_label_sum", "fuel_type_id_3_label_sum"]
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [140.03953321959636, 165.85440713553217, 137.39106245624458, 159.70264618447598]
+    线上：125.4979
+
+2. 增加特征"newenergy_type_id_1_label_sum", "newenergy_type_id_2_label_sum", "newenergy_type_id_3_label_sum", "newenergy_type_id_4_label_sum"
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               "newenergy_type_id_1_label_sum", "newenergy_type_id_2_label_sum", "newenergy_type_id_3_label_sum",
+               "newenergy_type_id_4_label_sum"]
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [135.27306281514322, 168.42556432549111, 136.65404957413, 170.28094340836853]
+    线上：124.9668
+    
+3. 增加特征'emission_standards_id_2_sum','emission_standards_id_5_sum'
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'emission_standards_id_2_sum', 'emission_standards_id_5_sum']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [140.39292333699095, 166.01235453664518, 138.28711131217136, 163.91631612787816]
+    线上：126.48
+
+20180126
+在20170124模型1的基础上增加特征
+
+1. 增加特征'type_id_1_label_sum','type_id_3_label_sum'
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level", 
+               'type_id_1_label_sum','type_id_3_label_sum']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [139.71591408549276, 168.94727543772697, 137.09589971817852, 158.86738309910888]
+    线上：120.12
+
+2. 增加特征'level_id_3_label_sum','level_id_5_label_sum'
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+                'level_id_3_label_sum', 'level_id_5_label_sum']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [139.84822076192606, 164.78662333863838, 137.17984621523755, 163.08955843559443]
+    线上：126.3337
+
+3. 增加特征'level_id_2_label_sum','level_id_4_label_sum'
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+                'level_id_2_label_sum','level_id_4_label_sum']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [138.22901957965126, 164.47856333377058, 135.38590339360815, 163.47047027190297]
+    线上：127.4741
+
+20180127
+在20180124模型1基础上增加两组特征
+
+1. 增加特征'newenergy_1_is_increase','newenergy_2_is_increase','newenergy_3_is_increase','newenergy_4_is_increase'
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'newenergy_1_is_increase','newenergy_2_is_increase','newenergy_3_is_increase','newenergy_4_is_increase']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [137.23986289831734, 167.17592441124685, 137.05794560515409, 166.93779738121046]
+    线上：125.0760
+
+2. 增加特征'newenergy_2_increase','newenergy_3_increase'
+    xgboost
+    {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
+             "early_stopping_rounds": 100}
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'newenergy_2_increase','newenergy_3_increase']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [138.89510549562704, 168.44918654097421, 136.7044747310166, 165.37827716465242]
+    线上：126.0567
+
+20180128
+
+
+1. 增加'level_id_1_label_sum','level_id_3_label_sum', 'level_id_0_label_sum'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum', 'level_id_1_label_sum','level_id_3_label_sum',
+               'level_id_0_label_sum' ]
+    提交该答案是因为另外7个验证集有5个有提升，测试那一组验证集是否有效
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [141.80739292883368, 169.5761659975723, 138.37776033075303, 167.07342775038171]
+    线上：124.4632
+
+2. 增加'newenergy_1_increase','newenergy_2_increase','newenergy_4_increase'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase','newenergy_4_increase']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [152.47747919372182, 155.75485219357981, 152.58091425868332, 152.19586123300149]
+    线上：129.4965
+
+结论：后选出来的7个验证集提高五个的规则无效，还是使用原来的四个验证集，注意验证集1，4必须提高，二三提高一个即可让线上成绩提高，如果四个验证集都提高最好
+
+20180129
+在 20180126的基础上增加几组特征
+
+1. 增加'wheelbase_history_mean','front_track_history_mean','max_price_history_mean','min_price_history_mean'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum',
+               'wheelbase_history_mean', 'front_track_history_mean', 'max_price_history_mean', 'min_price_history_mean']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [135.35375287144186, 161.50951949249415, 134.36960337229601, 162.08429661555363]
+    线上：119.9971
+
+20180130
+在20180129基础上增加3组特征
+
+1.增加 'TR_history_count','gearbox_type_history_count','displacement_history_count','if_charging_history_count','driven_type_id_history_count','fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count','max_price_history_count'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [135.01867862527419, 164.94423483495552, 135.22932516186071, 161.1617058876744]
+    线上：118.26
+
+2. 增加'cylinder_number_history_mean','car_length_history_mean','car_width_history_mean','rated_passenger_history_mean'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'cylinder_number_history_mean',
+               'car_length_history_mean','car_width_history_mean','rated_passenger_history_mean']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [135.83536731,158.83840244,134.540575442,161.139299203]
+
+20180131
+在20180130最好特征基础上，增加两组特征
+
+1. 增加特征'gearbox_type_DCT_label_ratio','gearbox_type_MT;AT_label_ratio'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count', 'gearbox_type_DCT_label_ratio','gearbox_type_MT;AT_label_ratio']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [131.92543368295952, 163.19947231989482, 136.11732573840413, 158.85255290635283]
+    线上：120.8121
+    
+2. 增加特征'gearbox_type_DCT_label_ratio','gearbox_type_AT;DCT_label_ratio'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count', 'gearbox_type_DCT_label_ratio','gearbox_type_AT;DCT_label_ratio']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [131.92543368295952, 163.23942537215879, 136.10653142185055, 158.88613401931744]
+    这个答案和上面答案一致，未保存
+
+3. 增加特征 'gearbox_type_MT_label_ratio','gearbox_type_DCT_label_ratio','gearbox_type_CVT_label_ratio','gearbox_type_AMT_label_ratio','gearbox_type_AT;DCT_label_ratio','gearbox_type_MT;AT_label_ratio'
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count', 'gearbox_type_MT_label_ratio','gearbox_type_DCT_label_ratio',
+               'gearbox_type_CVT_label_ratio','gearbox_type_AMT_label_ratio','gearbox_type_AT;DCT_label_ratio',
+               'gearbox_type_MT;AT_label_ratio']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [130.58546360992366, 164.06978821950773, 128.76990300498116, 160.246691092742]
+    线上：122.9446
+    
+20180201
+在20180130最好结果基础上，增加几组特征
+
+1. 增加'gearbox_type_DCT_label_ratio','gearbox_type_AMT_label_ratio'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count', 'gearbox_type_DCT_label_ratio','gearbox_type_AMT_label_ratio']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [132.50973636192634, 162.95422642570176, 134.8194389512667, 158.48736443333891]
+    
+2. 增加'gearbox_type_MT_label_ratio','gearbox_type_AMT_label_ratio'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count', 'gearbox_type_MT_label_ratio','gearbox_type_AMT_label_ratio']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [132.77006519782179, 161.1081018239727, 133.78037222525583, 160.97805229201376]
+    线上：120.7691
+
+3. 增加'car_width_history_mean','car_height_history_mean'
+    特征
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count', 'car_width_history_mean','car_height_history_mean']
+    四个验证集：
+    1. 2017年9月的销售记录（label是2017年10月的销量）
+    2. 2016年10月销售记录（label是2016年11月的销量）
+    3. 2017年9月的销售记录（label是2017年10月的销量），训练集中去掉2016年10月的数据
+    4. 2016年10月销售记录（label是2016年11月的销量），训练集中去掉2017年9月的数据
+    [134.09656276942698, 162.26514132051759, 134.70112222182635, 157.87807874394812]
+    线上：120.6814
+    
+20180204
+
+以月销量1000为阈值进行划分，设计了验证集验证月销量小于1000的车型的预测准确率，该验证集较为合理。
+以月销量1000为阈值将预测车型分成两部分，并分别预测。由于测试集中销量小于1000的车型占85%左右，因此主要该部分车型。
+验证集设计思路：
+    cv8_train_X = train_origin[(train_origin["label"] >= 0) &
+                              (train_origin["sale_date"] < 69) & (train_origin["sale_date"] != 58)].copy()
+    cv8_train_y = cv8_train_X["label"]
+    cv8_test_X = train_origin[(train_origin["label"] >= 0) & (train_origin["sale_date"] == 58) &
+                              (train_origin["label"] < 1000)].copy()
+    cv8_test_y = cv8_test_X["label"]
+训练集选取非2017年9月和2016年10月数据，预测集为2016年10月的销量小于1000的数据，通过实验发现，该验证集能够很好验证“增加特征是否能提高模型预测销量小于1000的车型的销量的能力”
+（在增加验证集之前，下文提到的“验证集”均是这个验证集）
+
+1. 从验证集分数比较得出，20180128模型2的验证集分数较高，但线上分数降低，观察数据发现其销量大于1000的预测结果较20180130模型1的差距较大，所以猜想销量大于1000的预测结果的误差增加是使20180128模型2线上下降的主要原因。而反观20180130的模型1和20180129的模型1，尽管在验证集中下降，但是线上有一定提升，猜想20180130的模型1中销量大于1000的预测结果准确率较高。为验证以上观点，综合20180128模型2中预测结果小于1000的部分和20180130模型1中预测结果大于1000的部分，构造本次结果
+    结果：综合类20180128模型2和20180130模型1的结果，取前者预测结果小于1000的部分和后者预测结果大于1000的部分
+    线上：114.85
+
+结论：下阶段使用该验证集主要提升销量小于1000的车型的预测准确率，并思考销量大于1000的车型要如何设计验证集，或者如何预测较好
+
+20180205
+
+在20180128模型2的基础上增加几组特征，用来预测销量小于1000的样本
+20180128模型2的验证集结果是：95.40731272249967
+
+1. 增加 'engine_torque_history_mean', 'cylinder_number_history_mean', 'car_length_history_mean', 'equipment_quality_history_mean', 'car_height_history_mean', 'compartment_history_mean'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
+               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
+               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
+               'compartment_history_mean']
+    验证集：92.08283489393214
+    结果：预测结果小于1000的部分 + 20180130模型1中预测大于1000的部分
+    线上：112.70
+
+
+2. 增加'power_label_history_mean', 'cylinder_number_label_history_mean', 'compartment_decay', 'car_length_decay', 'total_quality_decay', 'equipment_quality_decay', 'rated_passenger_decay', 'type_id_prefer'
+    特征：
+    ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
+               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
+               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
+               'compartment_history_mean', 'power_label_history_mean','cylinder_number_label_history_mean',
+               'compartment_decay', 'car_length_decay', 'total_quality_decay', 'equipment_quality_decay',
+               'rated_passenger_decay', 'type_id_prefer']
+    验证集：89.2479760041948
+    结果：预测结果小于1000的部分 + 20180130模型1中预测大于1000的部分
+    线上：116.2570
+    问题：两部分答案并不是互补的，该答案就出现了预测结果大于1000但20180130模型1对应结果小于1000的情况，而且变动幅度有90+
+
