@@ -6,7 +6,7 @@ import numpy as np
 import copy
 
 # 路径设置为None就不会输出文件
-predict_output_path =None
+predict_output_path = "./20180207/20180207_result2.csv"
 
 xgb_param = {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
              "early_stopping_rounds": 100}
@@ -117,37 +117,43 @@ cv9_test_y = cv9_test_X["label"]
 '''---------------------训练模型-------------------'''
 print "---------------------训练模型-------------------"
 # 用训练集训练的模型
-# feature_used = ["sales", "rated_passenger_mean", "cylinder_number_mean", "min_price_mean", "fuel_type_id_count",
-#                "driven_type_id_count", "min_price_label_mean", "rated_passenger_label_mean", "displacement_count",
-#                "max_price_count", "min_price_median", "avg_price_median", "sales_is_increase",
-#                "is_price_in_price_level", "newenergy_1_increase", "newenergy_2_increase", "newenergy_4_increase",
-#                "cylinder_number_history_mean", "car_length_history_mean", "equipment_quality_history_mean"]
-# dtrain = xgb.DMatrix(train_X[feature_used].values, train_y - train_X["sales"])
-# dtest = xgb.DMatrix(test_X[feature_used].values)
-# dwatch = xgb.DMatrix(train_watch_list_X[feature_used].values, train_watch_list_y)
-# watchlist = [(dtrain, "watch_set")]
-# bst = xgb.train(xgb_param, dtrain, xgb_param['num_round'], watchlist, verbose_eval=10)
-# test_y = bst.predict(dtest) + test_X["sales"]
-# result_df = train_origin[train_origin["sale_date"] == 70][["class_id"]].copy()
-# result_df["predict_quantity"] = test_y
-# result_df["predict_date"] = "201711"
-# result_df["predict_quantity"] = result_df["predict_quantity"].apply(lambda x: int(x))
-# result_df["class_id"] = result_df["class_id"].apply(lambda x: int(x))
-# if predict_output_path:
-#     result_df[["predict_date", "class_id", "predict_quantity"]].to_csv(predict_output_path, index=None)
-# feature_score = bst.get_score(importance_type='gain')
-# feature_score_df = pd.DataFrame()
-# feature_score_df["feature_name"] = train_X[feature_used].columns
-# feature_score_df["score"] = 0
-# print feature_score
-# for idx in range(len(feature_score_df["feature_name"])):
-#     name = train_X[feature_used].columns[idx]
-#     if "f%d" % idx in feature_score:
-#         feature_score_df.loc[idx, "score"] = feature_score["f%d" % idx]
-# print feature_score_df.sort_values(["score"], ascending=False)
-# corr_df = train_X[["sales"]].copy()
-# corr_df["label"] = train_y
-# print corr_df[["label", "sales"]].corr()
+feature_used = ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
+               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
+               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
+               'compartment_history_mean', 'sales_predict_ridge','price_predict_linear','price_predict_ridge',
+               'price_predict_lasso']
+dtrain = xgb.DMatrix(train_X[feature_used].values, train_y)
+dtest = xgb.DMatrix(test_X[feature_used].values)
+dwatch = xgb.DMatrix(train_watch_list_X[feature_used].values, train_watch_list_y)
+watchlist = [(dtrain, "watch_set")]
+bst = xgb.train(xgb_param, dtrain, xgb_param['num_round'], watchlist, verbose_eval=10)
+test_y = bst.predict(dtest)
+result_df = train_origin[train_origin["sale_date"] == 70][["class_id"]].copy()
+result_df["predict_quantity"] = test_y
+result_df["predict_date"] = "201711"
+result_df["predict_quantity"] = result_df["predict_quantity"].apply(lambda x: int(x))
+result_df["class_id"] = result_df["class_id"].apply(lambda x: int(x))
+if predict_output_path:
+    result_df[["predict_date", "class_id", "predict_quantity"]].to_csv(predict_output_path, index=None)
+feature_score = bst.get_score(importance_type='gain')
+feature_score_df = pd.DataFrame()
+feature_score_df["feature_name"] = train_X[feature_used].columns
+feature_score_df["score"] = 0
+print feature_score
+for idx in range(len(feature_score_df["feature_name"])):
+    name = train_X[feature_used].columns[idx]
+    if "f%d" % idx in feature_score:
+        feature_score_df.loc[idx, "score"] = feature_score["f%d" % idx]
+print feature_score_df.sort_values(["score"], ascending=False)
+corr_df = train_X[["sales"]].copy()
+corr_df["label"] = train_y
+print corr_df[["label", "sales"]].corr()
 
 
 def cross_validation(feature_tmp):
@@ -155,10 +161,10 @@ def cross_validation(feature_tmp):
     # cv_train_y_lst = [cv1_train_y, cv2_train_y, cv3_train_y, cv4_train_y]
     # cv_test_X_lst = [cv1_test_X, cv2_test_X, cv3_test_X, cv4_test_X]
     # cv_test_y_lst = [cv1_test_y, cv2_test_y, cv3_test_y, cv4_test_y]
-    cv_train_X_lst = [cv9_train_X]
-    cv_train_y_lst = [cv9_train_y]
-    cv_test_X_lst = [cv9_test_X]
-    cv_test_y_lst = [cv9_test_y]
+    cv_train_X_lst = [cv8_train_X]
+    cv_train_y_lst = [cv8_train_y]
+    cv_test_X_lst = [cv8_test_X]
+    cv_test_y_lst = [cv8_test_y]
     error_lst = []
     for i in range(len(cv_train_X_lst)):
         print "========第 %d 次交叉验证==========" % i
@@ -167,7 +173,6 @@ def cross_validation(feature_tmp):
         watchlist_cv = [(dtest_cv, "test_cv")]
         model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], watchlist_cv, verbose_eval=10)
         result = np.array(model_cv.predict(dtest_cv))
-        result = result + cv_test_X_lst[i]["sales"]
         error_lst.append(np.sqrt(np.mean(np.power(result - cv_test_y_lst[i], 2))))
 
         model_cv.get_score(importance_type='gain')
@@ -190,13 +195,19 @@ def cross_validation(feature_tmp):
         # print model_cv.predict(dtest_cv)
     return error_lst
 
-feature_tmp = ["sales", "rated_passenger_mean", "cylinder_number_mean", "min_price_mean", "fuel_type_id_count",
-               "driven_type_id_count", "min_price_label_mean", "rated_passenger_label_mean", "displacement_count",
-               "max_price_count", "min_price_median", "avg_price_median", "sales_is_increase",
-               "is_price_in_price_level", "newenergy_1_increase", "newenergy_2_increase", "newenergy_4_increase",
-               "cylinder_number_history_mean", "car_length_history_mean", "equipment_quality_history_mean"]
-# error_lst = cross_validation(feature_tmp=feature_tmp)
-# print error_lst
+feature_tmp = ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
+               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
+               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
+               'compartment_history_mean', 'sales_predict_ridge','price_predict_linear','price_predict_ridge',
+               'price_predict_lasso']
+error_lst = cross_validation(feature_tmp=feature_tmp)
+print error_lst
 
 
 # 如果增加一组特征，将集合内所有特征组合都进行交叉验证
