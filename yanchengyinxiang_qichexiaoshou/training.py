@@ -195,7 +195,89 @@ def cross_validation(feature_tmp):
         # print model_cv.predict(dtest_cv)
     return error_lst
 
-feature_tmp = ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+# feature_tmp = ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+#                "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+#                "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+#                "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+#                "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+#                "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+#                'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
+#                'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
+#                'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
+#                'compartment_history_mean']
+# error_lst = cross_validation(feature_tmp=feature_tmp)
+# print error_lst
+
+
+# 如果增加一组特征，将集合内所有特征组合都进行交叉验证
+# def all_subset(lst):
+#     result = []
+#     n = len(lst)
+#     for i in range(2 ** n):
+#         e = list(bin(i))[2:]
+#         e = np.array(e) == '1'
+#         result.append(lst[n - len(e):][e])
+#     return result
+# feature_append_names = ["sales_predict_linear", "sales_predict_ridge", "sales_predict_lasso",
+#                         "price_predict_linear", "price_predict_ridge", "price_predict_lasso",
+#                         "sales", "price_mean"]
+# feature_append_lst = all_subset(np.array(feature_append_names))
+# with open("feature_subset.txt", "a") as f:
+#     for feature_append in feature_append_lst:
+#         feature_tmp2 = copy.copy(feature_tmp)
+#         feature_tmp2.extend(feature_append)
+#         error_lst = cross_validation(feature_tmp2)
+#         print_names = ["'" + name + "'" for name in feature_append]
+#         print_error = [str(error) for error in error_lst]
+#         f.write(",".join(print_names) + "\n")
+#         f.write("[" + ",".join(print_error) + "]" + "\n")
+
+
+# 选择特征
+# 从少到多
+feature_lst = []
+prediction_lst = []
+feature_tmp = []
+with open("feature_used.txt") as f:
+    feature_tmp = f.readline().split(",")
+feature_used = feature_tmp
+for i in range(len(feature_used) - 1):
+    best_score = 10000
+    best_feature = None
+    print "=========start round %d=========" % i
+    for feature in feature_used:
+        feature_tmp = []
+        if len(feature_lst) == 0:
+            feature_tmp.append(feature)
+        else:
+            feature_tmp = copy.copy(feature_lst[-1])
+            feature_tmp.append(feature)
+        dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
+        dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
+        # watchlist_cv = [(dtest_cv, "test_cv")]
+        model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
+        result = np.array(model_cv.predict(dtest_cv))
+        result = result + cv9_test_X["sales"]
+        if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
+            best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
+            best_feature = feature
+    feature_add = []
+    if len(feature_lst) == 0:
+        feature_add.append(best_feature)
+    else:
+        feature_add = copy.copy(feature_lst[-1])
+        feature_add.append(best_feature)
+    feature_lst.append(feature_add)
+    prediction_lst.append(best_score)
+    feature_used.remove(best_feature)
+    with open("./20170207/feature_selection1.txt", "a") as f:
+        f.write(",".join(feature_add))
+        f.write("\n")
+        f.write(str(best_score))
+        f.write("\n")
+
+# 从多到少
+feature_lst = [["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
                "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
                "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
                "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
@@ -204,69 +286,29 @@ feature_tmp = ["sales", "car_length_label_mean", "if_charging_count", "rated_pas
                'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
                'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
                'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
-               'compartment_history_mean']
-# error_lst = cross_validation(feature_tmp=feature_tmp)
-# print error_lst
-
-
-# 如果增加一组特征，将集合内所有特征组合都进行交叉验证
-def all_subset(lst):
-    result = []
-    n = len(lst)
-    for i in range(2 ** n):
-        e = list(bin(i))[2:]
-        e = np.array(e) == '1'
-        result.append(lst[n - len(e):][e])
-    return result
-feature_append_names = ["sales_predict_linear", "sales_predict_ridge", "sales_predict_lasso",
-                        "price_predict_linear", "price_predict_ridge", "price_predict_lasso",
-                        "sales", "price_mean"]
-feature_append_lst = all_subset(np.array(feature_append_names))
-with open("feature_subset.txt", "a") as f:
-    for feature_append in feature_append_lst:
-        feature_tmp2 = copy.copy(feature_tmp)
-        feature_tmp2.extend(feature_append)
-        error_lst = cross_validation(feature_tmp2)
-        print_names = ["'" + name + "'" for name in feature_append]
-        print_error = [str(error) for error in error_lst]
-        f.write(",".join(print_names) + "\n")
-        f.write("[" + ",".join(print_error) + "]" + "\n")
-
-
-# 选择特征
-
-# feature_lst = []
-# prediction_lst = []
-# feature_used = cv1_train_X.columns.values.tolist()
-# for i in range(len(feature_used) - 1):
-#     best_score = 10000
-#     best_feature = None
-#     for feature in feature_used:
-#         feature_tmp = []
-#         if len(feature_lst) == 0:
-#             feature_tmp.append(feature)
-#         else:
-#             feature_tmp = copy.copy(feature_lst[-1])
-#             feature_tmp.append(feature)
-#         dtrain_cv = xgb.DMatrix(cv1_train_X[feature_tmp].values, cv1_train_y)
-#         dtest_cv = xgb.DMatrix(cv1_test_X[feature_tmp].values, cv1_test_y)
-#         watchlist_cv = [(dtest_cv, "test_cv")]
-#         model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], watchlist_cv, verbose_eval=10)
-#         result = np.array(model_cv.predict(dtest_cv))
-#         if np.sqrt(np.average(np.power(result - cv1_test_y.values, 2))) < best_score:
-#             best_score = np.sqrt(np.average(np.power(result - cv1_test_y.values, 2)))
-#             best_feature = feature
-#     feature_add = []
-#     if len(feature_lst) == 0:
-#         feature_add.append(best_feature)
-#     else:
-#         feature_add = copy.copy(feature_lst[-1])
-#         feature_add.append(best_feature)
-#     feature_lst.append(feature_add)
-#     prediction_lst.append(best_score)
-#     feature_used.remove(best_feature)
-#     with open("./20170118/feature_selection.txt", "a") as f:
-#         f.write(",".join(feature_add))
-#         f.write("\n")
-#         f.write(str(best_score))
-#         f.write("\n")
+               'compartment_history_mean']]
+for i in range(len(feature_used) - 1):
+    best_score = 10000
+    best_feature = None
+    print "=========start round %d=========" % i
+    for feature in feature_lst[-1]:
+        feature_tmp = copy.copy(feature_lst[-1])
+        feature_tmp.remove(feature)
+        dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
+        dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
+        # watchlist_cv = [(dtest_cv, "test_cv")]
+        model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
+        result = np.array(model_cv.predict(dtest_cv))
+        result = result + cv9_test_X["sales"]
+        if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
+            best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
+            best_feature = feature
+    feature_add = copy.copy(feature_lst[-1])
+    feature_add.remove(best_feature)
+    feature_lst.append(feature_add)
+    feature_used.remove(best_feature)
+    with open("./20170207/feature_selection3.txt", "a") as f:
+        f.write(",".join(feature_add))
+        f.write("\n")
+        f.write(str(best_score))
+        f.write("\n")
