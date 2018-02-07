@@ -21,7 +21,6 @@ print "-------------------------构造训练集，验证集-------------------"
 # 特征是历史的销售报表，标签是这个月的销售量。就像作为销售经理，用当月报表预测下个月汽车销量一样。
 # “历史”这个词可以有多种跨度：上个月，过去半年，过去一年，过去三年，历史全部。需要注意有些车型没有上市这么长时间（最短只上了2个月）
 # 暂时只考虑过去一个月的销售情况，构造特征的时候可以增加上个月销量和其他信息的交叉特征
-# 注意验证集构造，可以用原始训练集最后一个月的销售情况作验证集，其中有4个上市两个月的车型被排除在这个验证集外，可以最后再单独考虑这四个车型。
 
 
 # 预处理
@@ -235,46 +234,46 @@ def cross_validation(feature_tmp):
 
 # 选择特征
 # 从少到多
-feature_lst = []
-prediction_lst = []
-feature_tmp = []
-with open("feature_used.txt") as f:
-    feature_tmp = f.readline().split(",")
-feature_used = feature_tmp
-for i in range(len(feature_used) - 1):
-    best_score = 10000
-    best_feature = None
-    print "=========start round %d=========" % i
-    for feature in feature_used:
-        feature_tmp = []
-        if len(feature_lst) == 0:
-            feature_tmp.append(feature)
-        else:
-            feature_tmp = copy.copy(feature_lst[-1])
-            feature_tmp.append(feature)
-        dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
-        dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
-        # watchlist_cv = [(dtest_cv, "test_cv")]
-        model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
-        result = np.array(model_cv.predict(dtest_cv))
-        result = result + cv9_test_X["sales"]
-        if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
-            best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
-            best_feature = feature
-    feature_add = []
-    if len(feature_lst) == 0:
-        feature_add.append(best_feature)
-    else:
-        feature_add = copy.copy(feature_lst[-1])
-        feature_add.append(best_feature)
-    feature_lst.append(feature_add)
-    prediction_lst.append(best_score)
-    feature_used.remove(best_feature)
-    with open("./20170207/feature_selection1.txt", "a") as f:
-        f.write(",".join(feature_add))
-        f.write("\n")
-        f.write(str(best_score))
-        f.write("\n")
+# feature_lst = []
+# prediction_lst = []
+# feature_tmp = []
+# with open("feature_used.txt") as f:
+#     feature_tmp = f.readline().split(",")
+# feature_used = feature_tmp
+# for i in range(len(feature_used) - 1):
+#     best_score = 10000
+#     best_feature = None
+#     print "=========start round %d=========" % i
+#     for feature in feature_used:
+#         feature_tmp = []
+#         if len(feature_lst) == 0:
+#             feature_tmp.append(feature)
+#         else:
+#             feature_tmp = copy.copy(feature_lst[-1])
+#             feature_tmp.append(feature)
+#         dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
+#         dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
+#         # watchlist_cv = [(dtest_cv, "test_cv")]
+#         model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
+#         result = np.array(model_cv.predict(dtest_cv))
+#         result = result + cv9_test_X["sales"]
+#         if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
+#             best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
+#             best_feature = feature
+#     feature_add = []
+#     if len(feature_lst) == 0:
+#         feature_add.append(best_feature)
+#     else:
+#         feature_add = copy.copy(feature_lst[-1])
+#         feature_add.append(best_feature)
+#     feature_lst.append(feature_add)
+#     prediction_lst.append(best_score)
+#     feature_used.remove(best_feature)
+#     with open("./20180207/feature_selection.txt", "a") as f:
+#         f.write(",".join(feature_add))
+#         f.write("\n")
+#         f.write(str(best_score))
+#         f.write("\n")
 
 # 从多到少
 feature_lst = [["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
@@ -287,7 +286,7 @@ feature_lst = [["sales", "car_length_label_mean", "if_charging_count", "rated_pa
                'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
                'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
                'compartment_history_mean']]
-for i in range(len(feature_used) - 1):
+for i in range(len(feature_lst[0]) - 1):
     best_score = 10000
     best_feature = None
     print "=========start round %d=========" % i
@@ -306,8 +305,7 @@ for i in range(len(feature_used) - 1):
     feature_add = copy.copy(feature_lst[-1])
     feature_add.remove(best_feature)
     feature_lst.append(feature_add)
-    feature_used.remove(best_feature)
-    with open("./20170207/feature_selection3.txt", "a") as f:
+    with open("./20180207/feature_selection3.txt", "a") as f:
         f.write(",".join(feature_add))
         f.write("\n")
         f.write(str(best_score))
