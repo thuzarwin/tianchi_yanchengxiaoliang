@@ -160,10 +160,10 @@ def cross_validation(feature_tmp):
     # cv_train_y_lst = [cv1_train_y, cv2_train_y, cv3_train_y, cv4_train_y]
     # cv_test_X_lst = [cv1_test_X, cv2_test_X, cv3_test_X, cv4_test_X]
     # cv_test_y_lst = [cv1_test_y, cv2_test_y, cv3_test_y, cv4_test_y]
-    cv_train_X_lst = [cv8_train_X]
-    cv_train_y_lst = [cv8_train_y]
-    cv_test_X_lst = [cv8_test_X]
-    cv_test_y_lst = [cv8_test_y]
+    cv_train_X_lst = [cv9_train_X]
+    cv_train_y_lst = [cv9_train_y]
+    cv_test_X_lst = [cv9_test_X]
+    cv_test_y_lst = [cv9_test_y]
     error_lst = []
     for i in range(len(cv_train_X_lst)):
         print "========第 %d 次交叉验证==========" % i
@@ -172,18 +172,19 @@ def cross_validation(feature_tmp):
         watchlist_cv = [(dtest_cv, "test_cv")]
         model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], watchlist_cv, verbose_eval=10)
         result = np.array(model_cv.predict(dtest_cv))
+        result = result + cv_test_X_lst[i]["sales"]
         error_lst.append(np.sqrt(np.mean(np.power(result - cv_test_y_lst[i], 2))))
 
         model_cv.get_score(importance_type='gain')
         feature_score = model_cv.get_score(importance_type='gain')
         # 计算特征的信息增益
-        feature_score_df = pd.DataFrame()
-        feature_score_df["feature_name"] = cv_train_X_lst[i][feature_tmp].columns
-        feature_score_df["score"] = 0
-        for idx in range(len(feature_score_df["feature_name"])):
-            if "f%d" % idx in feature_score:
-                feature_score_df.loc[idx, "score"] = feature_score["f%d" % idx]
-        print feature_score_df.sort_values(["score"], ascending=False)
+        # feature_score_df = pd.DataFrame()
+        # feature_score_df["feature_name"] = cv_train_X_lst[i][feature_tmp].columns
+        # feature_score_df["score"] = 0
+        # for idx in range(len(feature_score_df["feature_name"])):
+        #     if "f%d" % idx in feature_score:
+        #         feature_score_df.loc[idx, "score"] = feature_score["f%d" % idx]
+        # print feature_score_df.sort_values(["score"], ascending=False)
         # 计算特征和标签的相关性
         # cv1_corr_train = cv_train_X_lst[i][["sales"]].copy()
         # cv1_corr_train["label"] = cv_train_y_lst[i]
@@ -194,16 +195,16 @@ def cross_validation(feature_tmp):
         # print model_cv.predict(dtest_cv)
     return error_lst
 
-# feature_tmp = ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
-#                "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
-#                "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
-#                "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
-#                "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
-#                "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
-#                'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
-#                'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
-#                'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
-#                'compartment_history_mean']
+feature_tmp = ["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
+               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
+               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
+               'compartment_history_mean']
 # error_lst = cross_validation(feature_tmp=feature_tmp)
 # print error_lst
 
@@ -219,9 +220,9 @@ def cross_validation(feature_tmp):
 #     return result
 # feature_append_names = ["sales_predict_linear", "sales_predict_ridge", "sales_predict_lasso",
 #                         "price_predict_linear", "price_predict_ridge", "price_predict_lasso",
-#                         "sales", "price_mean"]
+#                         "price_mean", "purchase_time"]
 # feature_append_lst = all_subset(np.array(feature_append_names))
-# with open("feature_subset.txt", "a") as f:
+# with open("feature_subset2.txt", "a") as f:
 #     for feature_append in feature_append_lst:
 #         feature_tmp2 = copy.copy(feature_tmp)
 #         feature_tmp2.extend(feature_append)
@@ -276,37 +277,37 @@ def cross_validation(feature_tmp):
 #         f.write("\n")
 
 # 从多到少
-feature_lst = [["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
-               "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
-               "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
-               "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
-               "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
-               "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
-               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
-               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
-               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
-               'compartment_history_mean']]
-for i in range(len(feature_lst[0]) - 1):
-    best_score = 10000
-    best_feature = None
-    print "=========start round %d=========" % i
-    for feature in feature_lst[-1]:
-        feature_tmp = copy.copy(feature_lst[-1])
-        feature_tmp.remove(feature)
-        dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
-        dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
-        # watchlist_cv = [(dtest_cv, "test_cv")]
-        model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
-        result = np.array(model_cv.predict(dtest_cv))
-        result = result + cv9_test_X["sales"]
-        if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
-            best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
-            best_feature = feature
-    feature_add = copy.copy(feature_lst[-1])
-    feature_add.remove(best_feature)
-    feature_lst.append(feature_add)
-    with open("./20180207/feature_selection3.txt", "a") as f:
-        f.write(",".join(feature_add))
-        f.write("\n")
-        f.write(str(best_score))
-        f.write("\n")
+# feature_lst = [["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
+#                "TR_count", "min_price_mean", "fuel_type_id_count", "driven_type_id_count", "gearbox_type_count",
+#                "newenergy_type_id_count", "min_price_label_mean", "car_height_mean", "engine_torque_mean",
+#                "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
+#                "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
+#                "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
+#                'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
+#                'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
+#                'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
+#                'compartment_history_mean']]
+# for i in range(len(feature_lst[0]) - 1):
+#     best_score = 10000
+#     best_feature = None
+#     print "=========start round %d=========" % i
+#     for feature in feature_lst[-1]:
+#         feature_tmp = copy.copy(feature_lst[-1])
+#         feature_tmp.remove(feature)
+#         dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
+#         dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
+#         # watchlist_cv = [(dtest_cv, "test_cv")]
+#         model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
+#         result = np.array(model_cv.predict(dtest_cv))
+#         result = result + cv9_test_X["sales"]
+#         if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
+#             best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
+#             best_feature = feature
+#     feature_add = copy.copy(feature_lst[-1])
+#     feature_add.remove(best_feature)
+#     feature_lst.append(feature_add)
+#     with open("./20180207/feature_selection3.txt", "a") as f:
+#         f.write(",".join(feature_add))
+#         f.write("\n")
+#         f.write(str(best_score))
+#         f.write("\n")
