@@ -6,7 +6,7 @@ import numpy as np
 import copy
 
 # 路径设置为None就不会输出文件
-predict_output_path = "./20180207/20180207_result2.csv"
+predict_output_path = "./20180208/20180208_base.csv"
 
 xgb_param = {'max_depth':4, 'eta':0.02, 'silent':1, 'objective':'reg:linear', "subsample": 0.8, "num_round": 1000,
              "early_stopping_rounds": 100}
@@ -123,11 +123,11 @@ feature_used = ["sales", "car_length_label_mean", "if_charging_count", "rated_pa
                "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
                "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
                "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
-               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
-               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
-               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
-               'compartment_history_mean', 'sales_predict_ridge','price_predict_linear','price_predict_ridge',
-               'price_predict_lasso']
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count']
 dtrain = xgb.DMatrix(train_X[feature_used].values, train_y)
 dtest = xgb.DMatrix(test_X[feature_used].values)
 dwatch = xgb.DMatrix(train_watch_list_X[feature_used].values, train_watch_list_y)
@@ -161,10 +161,10 @@ def cross_validation(feature_tmp):
     # cv_train_y_lst = [cv1_train_y, cv2_train_y, cv3_train_y, cv4_train_y]
     # cv_test_X_lst = [cv1_test_X, cv2_test_X, cv3_test_X, cv4_test_X]
     # cv_test_y_lst = [cv1_test_y, cv2_test_y, cv3_test_y, cv4_test_y]
-    cv_train_X_lst = [cv8_train_X]
-    cv_train_y_lst = [cv8_train_y]
-    cv_test_X_lst = [cv8_test_X]
-    cv_test_y_lst = [cv8_test_y]
+    cv_train_X_lst = [cv9_train_X]
+    cv_train_y_lst = [cv9_train_y]
+    cv_test_X_lst = [cv9_test_X]
+    cv_test_y_lst = [cv9_test_y]
     error_lst = []
     for i in range(len(cv_train_X_lst)):
         print "========第 %d 次交叉验证==========" % i
@@ -173,6 +173,7 @@ def cross_validation(feature_tmp):
         watchlist_cv = [(dtest_cv, "test_cv")]
         model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], watchlist_cv, verbose_eval=10)
         result = np.array(model_cv.predict(dtest_cv))
+        result = result + cv_test_X_lst[i]["sales"]
         error_lst.append(np.sqrt(np.mean(np.power(result - cv_test_y_lst[i], 2))))
 
         model_cv.get_score(importance_type='gain')
@@ -201,11 +202,11 @@ feature_tmp = ["sales", "car_length_label_mean", "if_charging_count", "rated_pas
                "rated_passenger_label_mean", "displacement_count", "displacement_mean", "max_price_count",
                "car_length_mean", "rated_passenger_count", "max_price_median", "min_price_median", "avg_price_median",
                "sales_is_increase", "is_price_smaller_min_price", "is_price_in_price_level",
-               'type_id_1_label_sum','type_id_3_label_sum', 'newenergy_1_increase','newenergy_2_increase',
-               'newenergy_4_increase', 'engine_torque_history_mean','cylinder_number_history_mean',
-               'car_length_history_mean','equipment_quality_history_mean','car_height_history_mean',
-               'compartment_history_mean', 'sales_predict_ridge','price_predict_linear','price_predict_ridge',
-               'price_predict_lasso']
+               'type_id_1_label_sum','type_id_3_label_sum','wheelbase_history_mean', 'front_track_history_mean',
+               'max_price_history_mean', 'min_price_history_mean', 'TR_history_count','gearbox_type_history_count',
+               'displacement_history_count','if_charging_history_count','driven_type_id_history_count',
+               'fuel_type_id_history_count','newenergy_type_id_history_count','rated_passenger_history_count',
+               'max_price_history_count']
 error_lst = cross_validation(feature_tmp=feature_tmp)
 print error_lst
 
@@ -236,50 +237,50 @@ print error_lst
 
 # 选择特征
 # 从少到多
-feature_lst = [["sales", "rated_passenger_mean", "cylinder_number_mean", "min_price_mean", "fuel_type_id_count",
-               "driven_type_id_count", "min_price_label_mean", "rated_passenger_label_mean", "displacement_count",
-               "max_price_count", "min_price_median", "avg_price_median", "sales_is_increase",
-               "is_price_in_price_level", "newenergy_1_increase", "newenergy_2_increase", "newenergy_4_increase",
-               "cylinder_number_history_mean", "car_length_history_mean", "equipment_quality_history_mean"]]
-prediction_lst = []
-feature_tmp = []
-with open("feature_used2.txt") as f:
-    feature_tmp = f.readline().split(",")
-feature_used = feature_tmp
-for i in range(len(feature_used) - 1):
-    best_score = 10000
-    best_feature = None
-    print "=========start round %d=========" % i
-    for feature in feature_used:
-        feature_tmp = []
-        if len(feature_lst) == 0:
-            feature_tmp.append(feature)
-        else:
-            feature_tmp = copy.copy(feature_lst[-1])
-            feature_tmp.append(feature)
-        dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
-        dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
-        # watchlist_cv = [(dtest_cv, "test_cv")]
-        model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
-        result = np.array(model_cv.predict(dtest_cv))
-        result = result + cv9_test_X["sales"]
-        if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
-            best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
-            best_feature = feature
-    feature_add = []
-    if len(feature_lst) == 0:
-        feature_add.append(best_feature)
-    else:
-        feature_add = copy.copy(feature_lst[-1])
-        feature_add.append(best_feature)
-    feature_lst.append(feature_add)
-    prediction_lst.append(best_score)
-    feature_used.remove(best_feature)
-    with open("./20180207/feature_selection4.txt", "a") as f:
-        f.write(",".join(feature_add))
-        f.write("\n")
-        f.write(str(best_score))
-        f.write("\n")
+# feature_lst = [["sales", "rated_passenger_mean", "cylinder_number_mean", "min_price_mean", "fuel_type_id_count",
+#                "driven_type_id_count", "min_price_label_mean", "rated_passenger_label_mean", "displacement_count",
+#                "max_price_count", "min_price_median", "avg_price_median", "sales_is_increase",
+#                "is_price_in_price_level", "newenergy_1_increase", "newenergy_2_increase", "newenergy_4_increase",
+#                "cylinder_number_history_mean", "car_length_history_mean", "equipment_quality_history_mean"]]
+# prediction_lst = []
+# feature_tmp = []
+# with open("feature_used2.txt") as f:
+#     feature_tmp = f.readline().split(",")
+# feature_used = feature_tmp
+# for i in range(len(feature_used) - 1):
+#     best_score = 10000
+#     best_feature = None
+#     print "=========start round %d=========" % i
+#     for feature in feature_used:
+#         feature_tmp = []
+#         if len(feature_lst) == 0:
+#             feature_tmp.append(feature)
+#         else:
+#             feature_tmp = copy.copy(feature_lst[-1])
+#             feature_tmp.append(feature)
+#         dtrain_cv = xgb.DMatrix(cv9_train_X[feature_tmp].values, cv9_train_y)
+#         dtest_cv = xgb.DMatrix(cv9_test_X[feature_tmp].values, cv9_test_y)
+#         # watchlist_cv = [(dtest_cv, "test_cv")]
+#         model_cv = xgb.train(xgb_param, dtrain_cv, xgb_param['num_round'], verbose_eval=10)
+#         result = np.array(model_cv.predict(dtest_cv))
+#         result = result + cv9_test_X["sales"]
+#         if np.sqrt(np.average(np.power(result - cv9_test_y.values, 2))) < best_score:
+#             best_score = np.sqrt(np.average(np.power(result - cv9_test_y.values, 2)))
+#             best_feature = feature
+#     feature_add = []
+#     if len(feature_lst) == 0:
+#         feature_add.append(best_feature)
+#     else:
+#         feature_add = copy.copy(feature_lst[-1])
+#         feature_add.append(best_feature)
+#     feature_lst.append(feature_add)
+#     prediction_lst.append(best_score)
+#     feature_used.remove(best_feature)
+#     with open("./20180207/feature_selection4.txt", "a") as f:
+#         f.write(",".join(feature_add))
+#         f.write("\n")
+#         f.write(str(best_score))
+#         f.write("\n")
 
 # 从多到少
 # feature_lst = [["sales", "car_length_label_mean", "if_charging_count", "rated_passenger_mean", "cylinder_number_mean",
